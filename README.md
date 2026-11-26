@@ -57,6 +57,7 @@ Send them the link. They create an account, you approve them under **Team → Wa
 - **Declined by mistake:** they appear under "Declined or removed"; click Approve.
 - **Rename a type:** Types → Edit. A type that's in use can't be deleted, only renamed.
 - **Change the page title or the name shown as approver:** `planner` in `docs/config.js`.
+- **Change the brand colour:** `--sky` near the top of `docs/index.html` (currently EEEWA light blue, `#4CB8E6`). Everyone can pick Light, Dark or Match device under **Your account → Appearance**.
 
 ## Optional hardening
 - In Google Cloud console → APIs & Services → Credentials, restrict the browser API key to `https://madhav1233.github.io/*`.

@@ -7,16 +7,15 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const AV = { yes: 'Available', part: 'Partly available', no: 'Unavailable' };
 const TM = { any: 'Any time', morning: 'Mornings', day: 'Daytime', evening: 'Evenings', weekend: 'Weekends', none: '—' };
-const TL = { morning: 'M', day: 'D', evening: 'E', weekend: 'W' };
 const RC = { yes: 'Reachable', slow: 'Slow to reply', no: "Can't be reached" };
-const COLORS = ['#2f6fdf', '#0f8b8d', '#00a05a', '#e0a100', '#ff6f59', '#8a5cf6', '#d9467a', '#6b7280'];
+const COLORS = ['#3F63D8', '#13A39B', '#2F9E5B', '#E3A008', '#EF6B4D', '#8B5CF6', '#D9488F', '#64748B'];
 const STARTER = [
-  ['t-travel', { name: 'Travel', color: '#e0a100', avail: 'no', time: 'none', reach: 'slow', order: 1 }],
-  ['t-workeve', { name: 'Working, free on evenings', color: '#2f6fdf', avail: 'part', time: 'evening', reach: 'yes', order: 2 }],
-  ['t-freeeve', { name: 'Free all day, prefers evenings', color: '#0f8b8d', avail: 'yes', time: 'evening', reach: 'yes', order: 3 }],
-  ['t-free', { name: 'Free all day', color: '#00a05a', avail: 'yes', time: 'any', reach: 'yes', order: 4 }],
-  ['t-weekends', { name: 'Busy, weekends only', color: '#8a5cf6', avail: 'part', time: 'weekend', reach: 'yes', order: 5 }],
-  ['t-offgrid', { name: 'Off the grid', color: '#6b7280', avail: 'no', time: 'none', reach: 'no', order: 6 }],
+  ['t-travel', { name: 'Travel', color: '#E3A008', avail: 'no', time: 'none', reach: 'slow', order: 1 }],
+  ['t-workeve', { name: 'Working, free on evenings', color: '#3F63D8', avail: 'part', time: 'evening', reach: 'yes', order: 2 }],
+  ['t-freeeve', { name: 'Free all day, prefers evenings', color: '#13A39B', avail: 'yes', time: 'evening', reach: 'yes', order: 3 }],
+  ['t-free', { name: 'Free all day', color: '#2F9E5B', avail: 'yes', time: 'any', reach: 'yes', order: 4 }],
+  ['t-weekends', { name: 'Busy, weekends only', color: '#8B5CF6', avail: 'part', time: 'weekend', reach: 'yes', order: 5 }],
+  ['t-offgrid', { name: 'Off the grid', color: '#64748B', avail: 'no', time: 'none', reach: 'no', order: 6 }],
 ];
 const pad = n => String(n).padStart(2, '0');
 const now = new Date();
@@ -26,12 +25,21 @@ const addD = (s, n) => { const t = P(s); t.setUTCDate(t.getUTCDate() + n); retur
 const len = (a, b) => Math.round((P(b) - P(a)) / 864e5) + 1;
 const fd = (s, o) => P(s).toLocaleDateString('en-AU', Object.assign({ day: 'numeric', month: 'short', timeZone: 'UTC' }, o));
 const isISO = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(P(s)) && P(s).toISOString().slice(0, 10) === s;
-const col = c => typeof c === 'string' && /^#[0-9a-fA-F]{6}$/.test(c) ? c : '#6b7280';
-const onCol = c => { const n = parseInt(c.slice(1), 16); return ((n >> 16) * 299 + (n >> 8 & 255) * 587 + (n & 255) * 114) / 1000 > 160 ? '#111' : '#fff'; };
+const col = c => typeof c === 'string' && /^#[0-9a-fA-F]{6}$/.test(c) ? c : '#64748B';
+const onCol = c => { const n = parseInt(c.slice(1), 16); return ((n >> 16) * 299 + (n >> 8 & 255) * 587 + (n & 255) * 114) / 1000 > 160 ? '#0E2235' : '#FFFFFF'; };
 const pick = (v, o, d) => Object.prototype.hasOwnProperty.call(o, v) ? v : d;
-const reachHTML = r => r === 'no' ? '<i class="r no"></i>' : r === 'slow' ? '<i class="r slow"></i>' : '';
-const UNK = { name: 'Unknown type', color: '#9aa5a0', avail: 'part', time: 'any', reach: 'yes' };
+const reachHTML = r => r === 'no' ? '<i class="r no" title="Can\'t be reached"></i>' : r === 'slow' ? '<i class="r slow" title="Slow to reply"></i>' : '';
+const UNK = { name: 'Unknown type', color: '#94A3B8', avail: 'part', time: 'any', reach: 'yes' };
 const nextMon = () => addD(TODAY, (8 - P(TODAY).getUTCDay()) % 7);
+const typeDesc = t => `${AV[t.avail]}${t.avail !== 'no' && t.time !== 'none' ? ', ' + TM[t.time].toLowerCase() : ''}, ${RC[t.reach].toLowerCase()}`;
+const fmtLen = n => n % 7 === 0 ? `${n / 7} week${n > 7 ? 's' : ''}` : `${n} day${n > 1 ? 's' : ''}`;
+function fmtRange(a, b) {
+  const A = P(a), B = P(b);
+  if (a === b) return fd(a, { year: 'numeric' });
+  if (A.getUTCFullYear() === B.getUTCFullYear() && A.getUTCMonth() === B.getUTCMonth()) return `${A.getUTCDate()}–${fd(b, { year: 'numeric' })}`;
+  if (A.getUTCFullYear() === B.getUTCFullYear()) return `${fd(a)} – ${fd(b, { year: 'numeric' })}`;
+  return `${fd(a, { year: 'numeric' })} – ${fd(b, { year: 'numeric' })}`;
+}
 
 document.title = planner.title || 'Availability planner';
 $('#appTitle').textContent = document.title;
@@ -52,12 +60,22 @@ const tps = () => [...types.values()].sort((a, b) => a.order - b.order || a.name
 const typeOf = b => types.get(b.type) || UNK;
 const monthDays = () => { const n = new Date(Date.UTC(cur.y, cur.m + 1, 0)).getUTCDate(); return Array.from({ length: n }, (_, i) => `${cur.y}-${pad(cur.m + 1)}-${pad(i + 1)}`); };
 
+/* ---------- theme ---------- */
+function markTheme() { const v = document.documentElement.dataset.theme || 'auto'; for (const b of document.querySelectorAll('[data-theme-set]')) b.setAttribute('aria-pressed', String(b.dataset.themeSet === v)); }
+function setTheme(v) {
+  try { if (v === 'auto') localStorage.removeItem('ap-theme'); else localStorage.setItem('ap-theme', v); } catch (e) { }
+  if (v === 'auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = v;
+  markTheme();
+}
+markTheme();
+
 /* ---------- screens ---------- */
 function show(screen) {
   const inApp = screen === 'app';
+  document.body.dataset.screen = screen;
   $('#gate').hidden = inApp; $('#gateHead').hidden = inApp;
   $('#app').hidden = $('#panels').hidden = $('#monthBar').hidden = $('#viewSeg').hidden = !inApp;
-  for (const el of document.querySelectorAll('[data-screen]')) el.hidden = el.dataset.screen !== screen;
+  for (const el of document.querySelectorAll('[data-screen]:not(body)')) el.hidden = el.dataset.screen !== screen;
   $('#account').hidden = !me;
 }
 function waiting(st) {
@@ -67,7 +85,7 @@ function waiting(st) {
   const t = {
     pending: ['Waiting for approval', `Thanks${myName ? ', ' + myName : ''}. ${who} needs to approve you before you can see the team's plans. This page opens by itself once you're in.`],
     declined: ['Not on the team', `${who} hasn't added this account to the team. If that seems wrong, get in touch with them.`],
-    error: ['Something went wrong', "We couldn't check your access. Try reloading the page, or sign out and back in."],
+    error: ['Something went wrong', "Your access couldn't be checked. Reload the page, or sign out and back in."],
   }[st] || ['Waiting for approval', ''];
   $('#wTitle').textContent = t[0]; $('#wText').textContent = t[1];
 }
@@ -77,17 +95,17 @@ const AUTH_MSG = {
   'auth/invalid-credential': 'That email and password don’t match an account.',
   'auth/wrong-password': 'That email and password don’t match an account.',
   'auth/user-not-found': 'That email and password don’t match an account.',
-  'auth/email-already-in-use': 'There’s already an account with that email. Try signing in instead.',
+  'auth/email-already-in-use': 'There’s already an account with that email. Sign in instead.',
   'auth/invalid-email': 'That email address doesn’t look right.',
   'auth/weak-password': 'Use a password of at least 8 characters.',
   'auth/too-many-requests': 'Too many tries. Wait a few minutes and try again.',
   'auth/operation-not-allowed': 'This sign-in method hasn’t been switched on in Firebase yet.',
   'auth/unauthorized-domain': 'This website isn’t on the Firebase project’s list of authorised domains yet.',
-  'auth/popup-closed-by-user': 'The Google window was closed before signing in finished.',
+  'auth/popup-closed-by-user': 'The Google window closed before sign-in finished.',
   'auth/popup-blocked': 'Your browser blocked the Google sign-in window. Allow pop-ups for this site and try again.',
   'auth/network-request-failed': 'Couldn’t reach the sign-in service. Check your connection.',
 };
-const authMsg = e => AUTH_MSG[e && e.code] || 'Sign-in didn’t work. Please try again.';
+const authMsg = e => AUTH_MSG[e && e.code] || 'Sign-in didn’t work. Try again.';
 function setMode(m) {
   mode = m;
   for (const b of document.querySelectorAll('[data-mode]')) b.setAttribute('aria-pressed', String(b.dataset.mode === m));
@@ -175,7 +193,7 @@ function startApp() {
   $('#adminTypes').hidden = $('#adminTeam').hidden = !isAdmin;
   if (appOn) { render(); return; }
   appOn = true; show('app'); $('#status').textContent = 'Loading the team’s plans…';
-  const listen = (q, fn, key) => unsubs.push(onSnapshot(q, s => { fn(s); if (key) loaded[key] = true; if (loaded.members && loaded.types && loaded.blocks) $('#status').textContent = ''; render(); }, e => { console.warn(e); $('#status').textContent = 'Lost access to the shared data. Try reloading the page.'; }));
+  const listen = (q, fn, key) => unsubs.push(onSnapshot(q, s => { fn(s); if (key) loaded[key] = true; if (loaded.members && loaded.types && loaded.blocks) $('#status').textContent = ''; render(); }, e => { console.warn(e); $('#status').textContent = 'Lost access to the shared data. Reload the page.'; }));
   listen(isAdmin ? collection(db, 'members') : query(collection(db, 'members'), where('status', '==', 'approved')), ingestMembers, 'members');
   listen(collection(db, 'types'), ingestTypes, 'types');
   listen(collection(db, 'blocks'), ingestBlocks, 'blocks');
@@ -198,10 +216,10 @@ const patch = (c, id, v) => run(() => updateDoc(doc(db, c, id), v));
 const del = (c, id) => run(() => deleteDoc(doc(db, c, id)));
 const newId = c => doc(collection(db, c)).id;
 
-/* ---------- calendar ---------- */
+/* ---------- capture ---------- */
 function resolve(uid, d) { let best = null; for (const b of byPerson.get(uid) || []) { if (b.start <= d && d <= b.end && (!best || b.len < best.len || (b.len === best.len && b.created > best.created))) best = b; } return best; }
 function stats(d, list) { const s = { yes: 0, part: 0, no: 0, unk: 0 }; for (const p of list) { const b = resolve(p.id, d); if (!b) { s.unk++; continue; } s[typeOf(b).avail]++; } s.score = s.yes + s.part / 2; return s; }
-function ranges(ds) { const out = []; let a = ds[0], p = ds[0]; for (const d of ds.slice(1).concat([null])) { if (d && addD(p, 1) === d) { p = d; continue; } out.push(a === p ? fd(a) : `${P(a).getUTCDate()}–${fd(p)}`); a = p = d; } return out.slice(0, 4).join(', ') + (out.length > 4 ? ` and ${out.length - 4} more` : ''); }
+function ranges(ds) { if (!ds.length) return ''; const out = []; let a = ds[0], p = ds[0]; for (const d of ds.slice(1).concat([null])) { if (d && addD(p, 1) === d) { p = d; continue; } out.push(a === p ? fd(a) : `${P(a).getUTCDate()}–${fd(p)}`); a = p = d; } return out.slice(0, 4).join(', ') + (out.length > 4 ? ` and ${out.length - 4} more` : ''); }
 
 function render() {
   if (!appOn) return;
@@ -215,46 +233,74 @@ function render() {
   const f = $('#finding');
   if (!list.length) f.textContent = 'Nobody is on the team yet.';
   else if (!max) f.textContent = `Nobody has marked themselves free in ${mName} yet.`;
-  else { const s = ST[[...best][0]]; f.innerHTML = `Most overlap: <b>${esc(ranges([...best]))}</b>, when ${s.yes + s.part} of ${list.length} people are free${s.part ? ` (${s.part} only partly)` : ''}.`; }
-  $('#legend').innerHTML = tps().map(t => `<span class="lt"><i class="mini a-${t.avail}" style="--t:${t.color}">${reachHTML(t.reach)}</i><span><b>${esc(t.name)}</b> <span class="muted">${AV[t.avail]}${t.avail !== 'no' && t.time !== 'none' ? ' · ' + TM[t.time] : ''} · ${RC[t.reach]}</span></span></span>`).join('') || `<span class="muted">No types yet.${isAdmin ? ' Add some in the Types panel below.' : ''}</span>`;
+  else { const s = ST[[...best][0]]; f.innerHTML = `Best overlap: <b>${esc(ranges([...best]))}</b>, with ${s.yes + s.part} of ${list.length} people free${s.part ? ` (${s.part} only partly)` : ''}.`; }
+  $('#legend').innerHTML = tps().map(t => `<span class="lt"><i class="mini a-${t.avail}" style="--t:${t.color}">${reachHTML(t.reach)}</i><span><b>${esc(t.name)}</b><small>${typeDesc(t)}</small></span></span>`).join('') || `<span class="muted">No types yet.${isAdmin ? ' Add some under Types below.' : ''}</span>`;
   $('#board').innerHTML = view === 'grid' ? gridHTML(days, list, best) : calHTML(days, list, best);
+  sizeGrid();
   renderDay(list); renderPanels();
   if (refocus) { refocus = false; document.querySelector(`[data-d="${sel}"][tabindex]`)?.focus(); }
 }
-function cellHTML(p, d) {
-  const b = resolve(p.id, d), s = d === sel ? ' sel' : '';
-  if (!b) return `<td class="c none${s}" data-d="${d}" title="${esc(p.name)}: nothing entered"></td>`;
-  const t = typeOf(b), tip = `${p.name}: ${t.name}\n${AV[t.avail]}${t.avail !== 'no' ? ' · ' + TM[t.time] : ''} · ${RC[t.reach]}${b.note ? '\n' + b.note : ''}`;
-  return `<td class="c a-${t.avail}${s}" style="--t:${t.color};--on:${onCol(t.color)}" data-d="${d}" title="${esc(tip)}">${t.avail !== 'no' && TL[t.time] ? TL[t.time] : ''}${reachHTML(t.reach)}</td>`;
+function sizeGrid() { const t = document.querySelector('.grid'), th = t && t.querySelector('thead th.day'); if (th) t.style.setProperty('--colw', th.getBoundingClientRect().width + 'px'); }
+new ResizeObserver(sizeGrid).observe($('#board'));
+
+const dayCls = d => { const w = P(d).getUTCDay(); return `${w % 6 === 0 ? ' we' : ''}${d === TODAY ? ' td' : ''}${d === sel ? ' sel' : ''}`; };
+function traceSVG(days, list, best) {
+  const n = days.length, N = list.length, W = n * 100, H = 72, top = 12, bot = 9;
+  const y = v => (H - bot - (v / N) * (H - top - bot)).toFixed(1);
+  let path = `M0 ${y(ST[days[0]].score)}`;
+  days.forEach((d, i) => { path += ` V${y(ST[d].score)} H${(i + 1) * 100}`; });
+  const levels = N <= 8 ? Array.from({ length: N + 1 }, (_, k) => k) : [0, N / 2, N];
+  const ns = 'vector-effect="non-scaling-stroke"';
+  const grid = levels.map(k => `<line class="g" x1="0" x2="${W}" y1="${y(k)}" y2="${y(k)}" ${ns}/>`).join('');
+  const weeks = days.map((d, i) => i && P(d).getUTCDay() === 1 ? `<line class="wk" x1="${i * 100}" x2="${i * 100}" y1="0" y2="${H}" ${ns}/>` : '').join('');
+  const bst = days.map((d, i) => best.has(d) ? `<rect class="bst" x="${i * 100}" y="0" width="100" height="${H}"/>` : '').join('');
+  const ti = days.indexOf(TODAY), si = days.indexOf(sel);
+  const vline = (i, c) => i < 0 ? '' : `<line class="${c}" x1="${i * 100 + 50}" x2="${i * 100 + 50}" y1="0" y2="${H}" ${ns}/>`;
+  return `<svg class="trace-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="How many people are free each day${best.size ? ', highest on ' + esc(ranges([...best])) : ''}">${bst}${grid}${weeks}<path class="area" d="${path} V${H} H0 Z"/><path class="sig" d="${path}" ${ns}/>${vline(ti, 'now')}${vline(si, 'cur')}</svg>`;
+}
+function rowCells(p, days) {
+  const bs = days.map(d => resolve(p.id, d)); let h = '';
+  for (let i = 0; i < days.length; i++) {
+    const b = bs[i], d = days[i];
+    if (!b) { h += `<td class="c z${dayCls(d)}" data-d="${d}" title="${esc(p.name)}: nothing entered"><div class="bar"></div></td>`; continue; }
+    const t = typeOf(b), jl = i > 0 && bs[i - 1] === b, jr = i < days.length - 1 && bs[i + 1] === b;
+    let lab = '';
+    if (!jl) { let L = 1; while (i + L < days.length && bs[i + L] === b) L++; lab = `<span class="lab" style="--n1:${L}">${reachHTML(t.reach)}<b>${esc(t.name)}</b>${b.note ? `<span class="note">${esc(b.note)}</span>` : ''}</span>`; }
+    const tip = `${p.name}: ${t.name}\n${typeDesc(t)}\n${fmtRange(b.start, b.end)}${b.note ? '\n' + b.note : ''}`;
+    h += `<td class="c ${t.avail}${jl ? ' jl' : ''}${jr ? ' jr' : ''}${dayCls(d)}" style="--t:${t.color};--on:${onCol(t.color)};--i:${i}" data-d="${d}" title="${esc(tip)}"><div class="bar a-${t.avail}"></div>${lab}</td>`;
+  }
+  return h;
 }
 function gridHTML(days, list, best) {
   if (!list.length) return '<p class="empty">Nobody is on the team yet.</p>';
-  const head = days.map(d => { const w = P(d).getUTCDay(); return `<th scope="col" tabindex="0" data-d="${d}" class="${w % 6 === 0 ? 'we' : ''}${d === TODAY ? ' td' : ''}${d === sel ? ' sel' : ''}" aria-label="${fd(d, { weekday: 'long', month: 'long' })}"><span>${'SMTWTFS'[w]}</span>${P(d).getUTCDate()}</th>`; }).join('');
-  const rows = list.map(p => `<tr><th scope="row" class="who${p.id === me.uid ? ' mine' : ''}" title="${esc(p.name)}">${esc(p.name)}</th>${days.map(d => cellHTML(p, d)).join('')}</tr>`).join('');
-  const tm = days.map(d => { const s = ST[d]; return `<td data-d="${d}" class="${best.has(d) ? 'best' : ''}${d === sel ? ' sel' : ''}" title="${s.yes} free, ${s.part} partly, ${s.no} unavailable, ${s.unk} not entered"><div class="bar"><i style="height:${Math.round(s.score / list.length * 100)}%"></i></div><small>${s.yes + s.part}</small></td>`; }).join('');
-  return `<div class="gridwrap"><table class="grid"><thead><tr><th class="who corner">${list.length} ${list.length === 1 ? 'person' : 'people'}</th>${head}</tr></thead><tbody>${rows}<tr class="team"><th scope="row" class="who">Free that day</th>${tm}</tr></tbody></table></div>`;
+  const n = days.length;
+  const head = days.map(d => `<th scope="col" class="day${dayCls(d)}" tabindex="0" data-d="${d}" aria-label="${fd(d, { weekday: 'long', month: 'long' })}"><span>${'SMTWTFS'[P(d).getUTCDay()]}</span>${P(d).getUTCDate()}</th>`).join('');
+  const trace = `<tr class="trace"><th scope="row" class="who">Team<small>${list.length} ${list.length === 1 ? 'person' : 'people'}</small></th><td class="tr-cell" colspan="${n}" data-trace="1">${traceSVG(days, list, best)}</td></tr>`;
+  const counts = `<tr class="counts"><th scope="row" class="who"><small>Free</small></th>${days.map(d => { const s = ST[d]; return `<td data-d="${d}" class="${best.has(d) ? 'best' : ''}${dayCls(d)}" title="${s.yes} free, ${s.part} partly, ${s.no} unavailable, ${s.unk} not entered">${s.yes + s.part}</td>`; }).join('')}</tr>`;
+  const rows = list.map(p => `<tr><th scope="row" class="who" title="${esc(p.name)}">${esc(p.name)}${p.id === me.uid ? '<span class="you">you</span>' : ''}</th>${rowCells(p, days)}</tr>`).join('');
+  return `<div class="gridwrap"><table class="grid" style="--n:${n}"><colgroup><col class="cw"><col span="${n}"></colgroup><thead><tr><th class="who"></th>${head}</tr></thead><tbody>${trace}${counts}${rows}</tbody></table></div>`;
 }
 function calHTML(days, list, best) {
   const off = (P(days[0]).getUTCDay() + 6) % 7;
   let h = '<div class="cal">' + ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(x => `<div class="dow">${x}</div>`).join('') + '<div></div>'.repeat(off);
   for (const d of days) {
     const w = P(d).getUTCDay(), s = ST[d];
-    const rows = list.map(p => { const b = resolve(p.id, d); if (!b) return `<span class="pr dim"><i class="mini none"></i><span class="nm">${esc(p.name)}</span></span>`; const t = typeOf(b); return `<span class="pr"><i class="mini a-${t.avail}" style="--t:${t.color}">${reachHTML(t.reach)}</i><span class="nm">${esc(p.name)}</span><b>${t.avail !== 'no' ? (TL[t.time] || '') : ''}</b></span>`; }).join('');
-    h += `<div class="dc${w % 6 === 0 ? ' we' : ''}${d === TODAY ? ' today' : ''}${d === sel ? ' sel' : ''}${best.has(d) ? ' best' : ''}" role="button" tabindex="0" data-d="${d}" aria-label="${fd(d, { weekday: 'long', month: 'long' })}, ${s.yes + s.part} of ${list.length} free"><span class="hd"><span class="dn">${P(d).getUTCDate()}</span>${list.length ? `<span class="ds">${s.yes + s.part}/${list.length} free</span>` : ''}</span><span class="ppl">${rows}</span></div>`;
+    const rows = list.map(p => { const b = resolve(p.id, d); if (!b) return `<span class="pr dim"><i class="mini z"></i><span class="nm">${esc(p.name)}</span></span>`; const t = typeOf(b); return `<span class="pr" title="${esc(t.name)}"><i class="mini a-${t.avail}" style="--t:${t.color}">${reachHTML(t.reach)}</i><span class="nm">${esc(p.name)}</span></span>`; }).join('');
+    h += `<div class="dc${w % 6 === 0 ? ' we' : ''}${d === TODAY ? ' today' : ''}${d === sel ? ' sel' : ''}${best.has(d) ? ' best' : ''}" role="button" tabindex="0" data-d="${d}" aria-label="${fd(d, { weekday: 'long', month: 'long' })}, ${s.yes + s.part} of ${list.length} free"><span class="hd"><span class="dn">${P(d).getUTCDate()}</span>${list.length ? `<span class="ds">${s.yes + s.part} of ${list.length} free</span>` : ''}</span><span class="ppl">${rows}</span></div>`;
   }
   return h + '</div>';
 }
 function renderDay(list) {
   const el = $('#day');
-  if (!sel || !sel.startsWith(`${cur.y}-${pad(cur.m + 1)}-`)) { el.innerHTML = '<p class="hint">Pick a day to see who is free, when they would rather work, and whether you can reach them.</p>'; return; }
+  if (!sel || !sel.startsWith(`${cur.y}-${pad(cur.m + 1)}-`)) { el.innerHTML = '<p class="hint">Pick a day to see who is free, when they’d rather work, and whether you can reach them.</p>'; return; }
   const rows = list.map(p => {
     const b = resolve(p.id, sel), mine = p.id === me.uid;
     if (!b) return `<tr><td><b>${esc(p.name)}</b></td><td class="muted">Nothing entered</td><td></td><td></td><td></td><td></td><td>${mine ? '<button class="btn sm" data-add="1">Add block</button>' : ''}</td></tr>`;
     const t = typeOf(b);
-    return `<tr><td><b>${esc(p.name)}</b></td><td><span class="tchip"><i class="mini a-${t.avail}" style="--t:${t.color}"></i>${esc(t.name)}</span><div class="muted sm">${fd(b.start)} – ${fd(b.end, { year: 'numeric' })}</div></td><td>${AV[t.avail]}</td><td>${t.avail === 'no' ? '—' : TM[t.time]}</td><td class="${t.reach === 'no' ? 'warn' : ''}">${RC[t.reach]}</td><td>${esc(b.note)}</td><td>${mine ? `<button class="btn sm" data-edit="${esc(b.id)}">Edit</button>` : ''}</td></tr>`;
+    return `<tr><td><b>${esc(p.name)}</b></td><td><span class="tchip"><i class="mini a-${t.avail}" style="--t:${t.color}"></i>${esc(t.name)}</span><span class="when">${fmtRange(b.start, b.end)}</span></td><td>${AV[t.avail]}</td><td>${t.avail === 'no' ? '—' : TM[t.time]}</td><td class="${t.reach === 'no' ? 'warn' : ''}">${RC[t.reach]}</td><td>${esc(b.note)}</td><td>${mine ? `<button class="btn sm" data-edit="${esc(b.id)}">Edit</button>` : ''}</td></tr>`;
   }).join('');
   const s = ST[sel] || { yes: 0, part: 0 };
-  el.innerHTML = `<h3>${fd(sel, { weekday: 'long', month: 'long' })}</h3><p class="hint" style="margin-bottom:8px">${s.yes} free, ${s.part} partly free, out of ${list.length}.</p>` + (list.length ? `<table class="dt stack"><thead><tr><th>Person</th><th>Block</th><th>Availability</th><th>Best time</th><th>Contact</th><th>Note</th><th></th></tr></thead><tbody>${rows}</tbody></table>` : '');
+  el.innerHTML = `<h3>${fd(sel, { weekday: 'long', month: 'long' })}</h3><p class="daysum">${s.yes} free all day, ${s.part} partly free, out of ${list.length}.</p>` + (list.length ? `<table class="dt stack"><thead><tr><th>Person</th><th>Block</th><th>Availability</th><th>Best time</th><th>Contact</th><th>Note</th><th></th></tr></thead><tbody>${rows}</tbody></table>` : '');
 }
 function renderPanels() {
   const t = tps(), ts = $('#bType'), keep = ts.value;
@@ -263,16 +309,16 @@ function renderPanels() {
   const past = $('#showPast').checked;
   const mine = (byPerson.get(me.uid) || []).filter(b => past || b.end >= TODAY).sort((a, b) => a.start.localeCompare(b.start));
   $('#blist').innerHTML = mine.map(b => {
-    const ty = typeOf(b), w = b.len % 7 === 0 ? `${b.len / 7} wk${b.len > 7 ? 's' : ''}` : `${b.len} day${b.len > 1 ? 's' : ''}`;
-    return `<li><i class="mini a-${ty.avail}" style="--t:${ty.color}">${reachHTML(ty.reach)}</i><div class="txt"><b>${esc(ty.name)}</b><div class="sub">${fd(b.start)} – ${fd(b.end, { year: 'numeric' })} · ${w}${b.note ? ' · ' + esc(b.note) : ''}</div></div><div class="act"><button class="btn sm" data-edit="${esc(b.id)}">Edit</button><button class="btn sm danger" data-delb="${esc(b.id)}">Delete</button></div></li>`;
-  }).join('') || `<li class="muted">${past ? 'You haven’t added any blocks yet.' : 'No current or upcoming blocks. Add one above.'}</li>`;
+    const ty = typeOf(b);
+    return `<li><i class="mini a-${ty.avail}" style="--t:${ty.color}">${reachHTML(ty.reach)}</i><div class="txt"><b>${esc(ty.name)}</b><div class="meta"><span>${fmtRange(b.start, b.end)}</span><span>${fmtLen(b.len)}</span>${b.note ? `<span>${esc(b.note)}</span>` : ''}</div></div><div class="act"><button class="btn sm" data-edit="${esc(b.id)}">Edit</button><button class="btn sm danger" data-delb="${esc(b.id)}">Delete</button></div></li>`;
+  }).join('') || `<li><span class="empty-li">${past ? 'You haven’t added any blocks yet.' : 'No current or upcoming blocks. Add one above.'}</span></li>`;
   if (!isAdmin) return;
   const used = id => [...blocks.values()].filter(b => b.type === id).length;
   $('#starter').hidden = t.length > 0;
-  $('#tlist').innerHTML = t.map(x => { const n = used(x.id); return `<li><i class="mini a-${x.avail}" style="--t:${x.color}">${reachHTML(x.reach)}</i><div class="txt"><b>${esc(x.name)}</b><div class="sub">${AV[x.avail]}${x.avail !== 'no' && x.time !== 'none' ? ' · ' + TM[x.time] : ''} · ${RC[x.reach]} · ${n} block${n === 1 ? '' : 's'}</div></div><div class="act"><button class="btn sm" data-editt="${esc(x.id)}">Edit</button><button class="btn sm danger" data-delt="${esc(x.id)}">Delete</button></div></li>`; }).join('') || '<li class="muted">No types yet.</li>';
+  $('#tlist').innerHTML = t.map(x => { const n = used(x.id); return `<li><i class="mini a-${x.avail}" style="--t:${x.color}">${reachHTML(x.reach)}</i><div class="txt"><b>${esc(x.name)}</b><div class="meta"><span>${typeDesc(x)}</span><span>${n} block${n === 1 ? '' : 's'}</span></div></div><div class="act"><button class="btn sm" data-editt="${esc(x.id)}">Edit</button><button class="btn sm danger" data-delt="${esc(x.id)}">Delete</button></div></li>`; }).join('') || '<li><span class="empty-li">No types yet.</span></li>';
   const all = [...members.values()].sort((a, b) => a.name.localeCompare(b.name));
-  const line = (m, btns) => `<li><div class="txt"><b>${esc(m.name)}</b>${m.id === me.uid ? ' <span class="tag">you</span>' : ''}<div class="sub">${esc(emails.get(m.id) || 'no email')}${m.status === 'approved' ? ` · ${(n => `${n} block${n === 1 ? '' : 's'}`)((byPerson.get(m.id) || []).length)}` : m.requested && isISO(m.requested.slice(0, 10)) ? ` · asked ${fd(m.requested.slice(0, 10))}` : ''}</div></div><div class="act">${btns}</div></li>`;
-  $('#reqList').innerHTML = all.filter(m => m.status === 'pending').map(m => line(m, `<button class="btn sm primary" data-approve="${esc(m.id)}">Approve</button><button class="btn sm danger" data-decline="${esc(m.id)}">Decline</button>`)).join('') || '<li class="muted">Nobody is waiting.</li>';
+  const line = (m, btns) => { const n = (byPerson.get(m.id) || []).length; const extra = m.status === 'approved' ? `<span>${n} block${n === 1 ? '' : 's'}</span>` : m.requested && isISO(m.requested.slice(0, 10)) ? `<span>Asked ${fd(m.requested.slice(0, 10))}</span>` : ''; return `<li><div class="txt"><b>${esc(m.name)}</b>${m.id === me.uid ? '<span class="tag">you</span>' : ''}<div class="meta"><span>${esc(emails.get(m.id) || 'No email')}</span>${extra}</div></div><div class="act">${btns}</div></li>`; };
+  $('#reqList').innerHTML = all.filter(m => m.status === 'pending').map(m => line(m, `<button class="btn sm primary" data-approve="${esc(m.id)}">Approve</button><button class="btn sm danger" data-decline="${esc(m.id)}">Decline</button>`)).join('') || '<li><span class="empty-li">Nobody is waiting.</span></li>';
   $('#memList').innerHTML = all.filter(m => m.status === 'approved').map(m => line(m, m.id === me.uid ? '' : `<button class="btn sm danger" data-remove="${esc(m.id)}">${armed.get(m.id) || 'Remove'}</button>`)).join('');
   const dec = all.filter(m => m.status === 'declined');
   $('#decWrap').hidden = !dec.length;
@@ -299,7 +345,7 @@ async function delBlock(id) { const b = blocks.get(id); if (!b || b.uid !== me.u
 $('#bf').addEventListener('submit', async e => {
   e.preventDefault(); const err = $('#bErr'); err.textContent = '';
   const v = { uid: me.uid, type: $('#bType').value, start: $('#bStart').value, end: $('#bEnd').value, note: $('#bNote').value.trim().slice(0, 200) };
-  if (!types.has(v.type)) { err.textContent = isAdmin ? 'Add a type first (Types panel).' : 'There are no types to choose from yet. Ask the organiser to add some.'; return; }
+  if (!types.has(v.type)) { err.textContent = isAdmin ? 'Add a type first, under Types.' : 'There are no types to choose from yet. Ask the organiser to add some.'; return; }
   if (!isISO(v.start) || !isISO(v.end)) { err.textContent = 'Pick a start and an end date.'; return; }
   if (v.end < v.start) { err.textContent = 'The end date is before the start date.'; return; }
   if (len(v.start, v.end) > 731) { err.textContent = 'Keep a single block under two years.'; return; }
@@ -323,8 +369,8 @@ $('#renameForm').addEventListener('submit', async e => {
 
 /* ---------- admin: types ---------- */
 $('#tColors').innerHTML = COLORS.map((c, i) => `<label><input type="radio" name="tc" value="${c}"${i ? '' : ' checked'} aria-label="Colour ${i + 1}"><span style="background:${c}"></span></label>`).join('');
-function resetType() { editingType = null; $('#tf').reset(); $('#tSave').textContent = 'Add type'; $('#tCancel').hidden = true; $('#tErr').textContent = ''; const usedC = new Set(tps().map(t => t.color)); const free = COLORS.find(c => !usedC.has(c)) || COLORS[0]; document.querySelector(`[name=tc][value="${free}"]`).checked = true; }
-function editType(id) { const t = types.get(id); if (!t) return; resetType(); editingType = id; $('#tName').value = t.name; const r = document.querySelector(`[name=tc][value="${t.color}"]`); if (r) r.checked = true; $('#tAvail').value = t.avail; $('#tTime').value = t.time; $('#tReach').value = t.reach; $('#tSave').textContent = 'Save type'; $('#tCancel').hidden = false; go('#tf'); }
+function resetType() { editingType = null; $('#tf').reset(); $('#tSave').textContent = 'Add type'; $('#tfTitle').textContent = 'New type'; $('#tCancel').hidden = true; $('#tErr').textContent = ''; const usedC = new Set(tps().map(t => t.color.toUpperCase())); const free = COLORS.find(c => !usedC.has(c)) || COLORS[0]; document.querySelector(`[name=tc][value="${free}"]`).checked = true; }
+function editType(id) { const t = types.get(id); if (!t) return; resetType(); editingType = id; $('#tName').value = t.name; const r = document.querySelector(`[name=tc][value="${t.color.toUpperCase()}"]`); if (r) r.checked = true; $('#tAvail').value = t.avail; $('#tTime').value = t.time; $('#tReach').value = t.reach; $('#tSave').textContent = 'Save type'; $('#tfTitle').textContent = 'Edit type'; $('#tCancel').hidden = false; go('#tf'); }
 async function delType(id) {
   const t = types.get(id); if (!t) return;
   const n = [...blocks.values()].filter(b => b.type === id).length;
@@ -336,7 +382,7 @@ $('#tf').addEventListener('submit', async e => {
   e.preventDefault(); const err = $('#tErr'); err.textContent = '';
   const v = { name: $('#tName').value.trim().slice(0, 40), color: col(document.querySelector('[name=tc]:checked')?.value), avail: pick($('#tAvail').value, AV, 'part'), time: pick($('#tTime').value, TM, 'any'), reach: pick($('#tReach').value, RC, 'yes') };
   if (!v.name) { err.textContent = 'Give the type a name.'; return; }
-  if (tps().some(t => t.id !== editingType && t.name.toLowerCase() === v.name.toLowerCase())) { err.textContent = 'There is already a type with that name.'; return; }
+  if (tps().some(t => t.id !== editingType && t.name.toLowerCase() === v.name.toLowerCase())) { err.textContent = 'There’s already a type with that name.'; return; }
   v.order = editingType ? types.get(editingType).order : Math.max(0, ...tps().map(t => t.order)) + 1;
   const was = !!editingType;
   if (await put('types', editingType || newId('types'), v)) { toast(was ? 'Type updated' : 'Type added'); resetType(); }
@@ -363,7 +409,7 @@ $('#copy').onclick = async () => {
     const segs = []; let c = null;
     for (const d of days) { const b = resolve(p.id, d); if (c && c.b === b) c.to = d; else { c = { b, from: d, to: d }; segs.push(c); } }
     lines.push(p.name + ':');
-    for (const s of segs) { if (!s.b) continue; const t = typeOf(s.b); lines.push(`  ${s.from === s.to ? fd(s.from) : P(s.from).getUTCDate() + '–' + fd(s.to)}: ${t.name} (${AV[t.avail].toLowerCase()}${t.avail !== 'no' && t.time !== 'any' && t.time !== 'none' ? ', ' + TM[t.time].toLowerCase() : ''}, ${RC[t.reach].toLowerCase()})${s.b.note ? ' – ' + s.b.note : ''}`); }
+    for (const s of segs) { if (!s.b) continue; const t = typeOf(s.b); lines.push(`  ${s.from === s.to ? fd(s.from) : P(s.from).getUTCDate() + '–' + fd(s.to)}: ${t.name} (${typeDesc(t).toLowerCase()})${s.b.note ? ', ' + s.b.note : ''}`); }
     if (!segs.some(s => s.b)) lines.push('  nothing entered');
   }
   const txt = lines.join('\n'), out = $('#copyOut');
@@ -375,7 +421,10 @@ $('#next').onclick = () => { if (++cur.m > 11) { cur.m = 0; cur.y++; } render();
 $('#today').onclick = () => { cur = { y: now.getFullYear(), m: now.getMonth() }; sel = TODAY; render(); };
 
 document.addEventListener('click', e => {
+  const tc = e.target.closest('[data-trace]');
+  if (tc) { const r = tc.getBoundingClientRect(), days = monthDays(); sel = days[Math.min(days.length - 1, Math.max(0, Math.floor((e.clientX - r.left) / r.width * days.length)))]; render(); return; }
   const t = e.target.closest('button,[data-d]'); if (!t) return; const ds = t.dataset;
+  if (ds.themeSet) return setTheme(ds.themeSet);
   if (ds.mode) return setMode(ds.mode);
   if (ds.edit) return editBlock(ds.edit);
   if (ds.delb) return delBlock(ds.delb);
