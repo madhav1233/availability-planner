@@ -60,13 +60,15 @@ const tps = () => [...types.values()].sort((a, b) => a.order - b.order || a.name
 const typeOf = b => types.get(b.type) || UNK;
 const monthDays = () => { const n = new Date(Date.UTC(cur.y, cur.m + 1, 0)).getUTCDate(); return Array.from({ length: n }, (_, i) => `${cur.y}-${pad(cur.m + 1)}-${pad(i + 1)}`); };
 
-/* ---------- theme ---------- */
-function markTheme() { const v = document.documentElement.dataset.theme || 'auto'; for (const b of document.querySelectorAll('[data-theme-set]')) b.setAttribute('aria-pressed', String(b.dataset.themeSet === v)); }
-function setTheme(v) {
-  try { if (v === 'auto') localStorage.removeItem('ap-theme'); else localStorage.setItem('ap-theme', v); } catch (e) { }
-  if (v === 'auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = v;
+/* ---------- theme: light by default, dark on request ---------- */
+const isDark = () => document.documentElement.dataset.theme === 'dark';
+function markTheme() { const l = isDark() ? 'Switch to light mode' : 'Switch to dark mode'; $('#themeBtn').setAttribute('aria-label', l); $('#themeBtn').title = l; }
+$('#themeBtn').onclick = () => {
+  const dark = !isDark();
+  if (dark) document.documentElement.dataset.theme = 'dark'; else delete document.documentElement.dataset.theme;
+  try { if (dark) localStorage.setItem('ap-theme', 'dark'); else localStorage.removeItem('ap-theme'); } catch (e) { }
   markTheme();
-}
+};
 markTheme();
 
 /* ---------- screens ---------- */
@@ -424,7 +426,6 @@ document.addEventListener('click', e => {
   const tc = e.target.closest('[data-trace]');
   if (tc) { const r = tc.getBoundingClientRect(), days = monthDays(); sel = days[Math.min(days.length - 1, Math.max(0, Math.floor((e.clientX - r.left) / r.width * days.length)))]; render(); return; }
   const t = e.target.closest('button,[data-d]'); if (!t) return; const ds = t.dataset;
-  if (ds.themeSet) return setTheme(ds.themeSet);
   if (ds.mode) return setMode(ds.mode);
   if (ds.edit) return editBlock(ds.edit);
   if (ds.delb) return delBlock(ds.delb);
