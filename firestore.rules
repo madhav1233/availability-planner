@@ -1,0 +1,99 @@
+rules_version = '2';
+
+// Availability planner – who can do what
+// ---------------------------------------
+// admins/{uid}   Added by hand in the Firebase console. Nobody can write it from the website.
+// members/{uid}  A join request. Anyone signed in can ask to join as themselves ("pending").
+//                Only an admin can approve, decline or remove. People can rename themselves.
+// emails/{uid}   Each person's sign-in email, so the admin knows who is asking. Only they and admins can read it.
+// types/{id}     Block types (Travel, Free all day…). Team can read; only admins can change them.
+// blocks/{id}    Someone's stretch of time. Team can read all; each person can create, change
+//                and delete only their own (uid == their sign-in). Admins may delete any block.
+// Anything not listed here is denied.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function me() { return request.auth.uid; }
+    function isAdmin() {
+      return signedIn() && exists(/databases/$(database)/documents/admins/$(me()));
+    }
+    function isMember() {
+      let m = /databases/$(database)/documents/members/$(me());
+      return signedIn() && exists(m) && get(m).data.status == 'approved';
+    }
+    function onTeam() { return isAdmin() || isMember(); }
+    function isName(v) { return v is string && v.trim().size() > 0 && v.size() <= 40; }
+    function isDate(v) { return v is string && v.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}'); }
+    function isId(v) { return v is string && v.matches('[A-Za-z0-9_-]{1,64}'); }
+
+    match /admins/{uid} {
+      allow get: if signedIn() && me() == uid;
+    }
+
+    match /members/{uid} {
+      allow get: if signedIn() && (me() == uid || onTeam());
+      // Team members may only list approved people (the site queries status == 'approved').
+      allow list: if isAdmin() || (isMember() && resource.data.status == 'approved');
+
+      allow create: if signedIn() && me() == uid
+        && request.resource.data.keys().hasOnly(['name', 'status', 'requested'])
+        && isName(request.resource.data.name)
+        && request.resource.data.status == 'pending'
+        && request.resource.data.requested is string;
+
+      allow update: if
+        // admin: approve / decline / remove / rename anyone
+        (isAdmin()
+          && request.resource.data.keys().hasOnly(['name', 'status', 'requested'])
+          && isName(request.resource.data.name)
+          && request.resource.data.status in ['pending', 'approved', 'declined'])
+        // everyone else: change only their own name, never their status
+        || (signedIn() && me() == uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])
+          && isName(request.resource.data.name));
+
+      allow delete: if isAdmin();
+    }
+
+    match /emails/{uid} {
+      allow get: if signedIn() && (me() == uid || isAdmin());
+      allow list: if isAdmin();
+      allow create, update: if signedIn() && me() == uid
+        && request.resource.data.keys().hasOnly(['email'])
+        && request.resource.data.email == request.auth.token.email;
+      allow delete: if isAdmin();
+    }
+
+    match /types/{id} {
+      allow read: if onTeam();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly(['name', 'color', 'avail', 'time', 'reach', 'order'])
+        && isName(request.resource.data.name)
+        && request.resource.data.color is string
+        && request.resource.data.color.matches('#[0-9a-fA-F]{6}')
+        && request.resource.data.avail in ['yes', 'part', 'no']
+        && request.resource.data.time in ['any', 'morning', 'day', 'evening', 'weekend', 'none']
+        && request.resource.data.reach in ['yes', 'slow', 'no']
+        && request.resource.data.order is number;
+      allow delete: if isAdmin();
+    }
+
+    match /blocks/{id} {
+      function validBlock(d) {
+        return d.keys().hasOnly(['uid', 'type', 'start', 'end', 'note', 'created'])
+          && d.uid == me()
+          && isId(d.type)
+          && exists(/databases/$(database)/documents/types/$(d.type))
+          && isDate(d.start) && isDate(d.end) && d.end >= d.start
+          && d.note is string && d.note.size() <= 200
+          && d.created is string && d.created.size() <= 40;
+      }
+      allow read: if onTeam();
+      allow create: if onTeam() && validBlock(request.resource.data);
+      allow update: if onTeam() && resource.data.uid == me() && validBlock(request.resource.data);
+      allow delete: if (onTeam() && resource.data.uid == me()) || isAdmin();
+    }
+  }
+}
