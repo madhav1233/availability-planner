@@ -3,12 +3,12 @@
 // 2. These values are NOT secrets. Anyone can see them in the page source; that's normal for Firebase.
 //    What protects your data is firestore.rules (sign-in + your approval + own-blocks-only).
 export const firebaseConfig = {
-  apiKey: "PASTE_API_KEY",
-  authDomain: "PASTE_PROJECT_ID.firebaseapp.com",
-  projectId: "PASTE_PROJECT_ID",
-  storageBucket: "PASTE_PROJECT_ID.firebasestorage.app",
-  messagingSenderId: "PASTE_SENDER_ID",
-  appId: "PASTE_APP_ID"
+  apiKey: "AIzaSyAwOXYpy_XRaYnGcIflWtmMC9dfmujAU8o",
+  authDomain: "availability-planner-1ba44.firebaseapp.com",
+  projectId: "availability-planner-1ba44",
+  storageBucket: "availability-planner-1ba44.firebasestorage.app",
+  messagingSenderId: "793865179389",
+  appId: "1:793865179389:web:d9c2c737c492fb19cbee94"
 };
 
 // What the page calls itself, and who approves new people.
