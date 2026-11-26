@@ -388,6 +388,13 @@ table.dt{width:100%;border-collapse:collapse;font-size:15px}
 </div></section>
 </main>
 <div class="toast" id="toast" role="status" hidden></div>
-<script type="module" src="app.js"></script>
+<script>
+/* Dark-mode switch: lives in the page so it works even before the app (and Firebase) loads. */
+{const b=document.getElementById('themeBtn'),r=document.documentElement;
+const mark=()=>{const l=r.dataset.theme==='dark'?'Switch to light mode':'Switch to dark mode';b.setAttribute('aria-label',l);b.title=l};
+b.addEventListener('click',()=>{const d=r.dataset.theme!=='dark';if(d)r.dataset.theme='dark';else delete r.dataset.theme;try{if(d)localStorage.setItem('ap-theme','dark');else localStorage.removeItem('ap-theme')}catch(e){}mark()});
+mark()}
+</script>
+<script type="module" src="app.js?v=5"></script>
 </body>
 </html>
